@@ -2,7 +2,14 @@
 import pygame
 import random
 import time
-import ttkbootstrap as ttk
+from kivy.app import App
+from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.gridlayout import GridLayout
+from kivy.core.window import Window
+from kivy.uix.widget import Widget
+from kivy.graphics import Color, RoundedRectangle
 
 # Default board settings
 board_cells = 12
@@ -18,6 +25,8 @@ green = pygame.Color(0, 255, 0)
 blue = pygame.Color(0, 0, 255)
 light_green = pygame.Color(170, 215, 81)
 dark_green = pygame.Color(162, 209, 73)
+
+snake_speed = 10  # You can adjust this as needed
 
 def run_game():
     pygame.init()
@@ -58,7 +67,7 @@ def run_game():
         time.sleep(2)
         pygame.quit()
         quit()
-
+    # Main game loop
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -135,33 +144,63 @@ def run_game():
         fps.tick(snake_speed)
 
 def start_game():
-    def set_cell_size(size):
-        global board_cells, cell_size, window_x, window_y
-        board_cells = size
-        window_x = 800 - (800 % board_cells)
-        window_y = 800 - (800 % board_cells)
-        cell_size = window_x // board_cells
+    class SnakeMenuApp(App):
+        def build(self):
+            # Main layout with background
+            root = BoxLayout(orientation='vertical', padding=20, spacing=20)
+            # Add rounded background
+            with root.canvas.before:
+                Color(0.4, 0.8, 1, 0.95)
+                self.bg = RoundedRectangle(radius=[20], pos=root.pos, size=root.size)
+            root.bind(pos=self.update_bg, size=self.update_bg)
 
-    root = ttk.Window(title="Snake Game", themename="darkly")
-    root.geometry("300x200")
-    root.resizable(False, False)
+            # Title
+            root.add_widget(Label(text="Snake Game", font_size=32, size_hint=(1, 0.2)))
 
-    def start():
-        root.destroy()
-        run_game()
+            # Board size row
+            board_row = BoxLayout(orientation='horizontal', spacing=10, size_hint=(1, 0.2))
+            board_row.add_widget(Label(text="Board Size:", font_size=20, size_hint=(0.5, 1)))
 
-    start_button = ttk.Button(root, text="Start Game", command=start, bootstyle="success")
-    start_button.pack(expand=True)
+            small_btn = Button(text="Small\n8x8", font_size=18, background_color=(0.7, 0.9, 1, 1))
+            small_btn.bind(on_release=lambda instance: self.set_cell_size(8))
+            board_row.add_widget(small_btn)
 
-    small_button = ttk.Button(root, text="Small Board", command=lambda: set_cell_size(8), bootstyle="info")
-    small_button.pack(expand=True)
+            medium_btn = Button(text="Medium\n12x12", font_size=18, background_color=(1, 0.6, 0, 1))
+            medium_btn.bind(on_release=lambda instance: self.set_cell_size(12))
+            board_row.add_widget(medium_btn)
 
-    medium_button = ttk.Button(root, text="Medium Board", command=lambda: set_cell_size(12), bootstyle="warning")
-    medium_button.pack(expand=True)
+            large_btn = Button(text="Large\n16x16", font_size=18, background_color=(1, 0, 0, 1), color=(1, 1, 1, 1))
+            large_btn.bind(on_release=lambda instance: self.set_cell_size(16))
+            board_row.add_widget(large_btn)
 
-    large_button = ttk.Button(root, text="Large Board", command=lambda: set_cell_size(16), bootstyle="danger")
-    large_button.pack(expand=True, side="bottom")
+            root.add_widget(board_row)
 
-    root.mainloop()
+            # Spacer
+            root.add_widget(Widget(size_hint=(1, 0.2)))
+
+            # Start game button
+            start_btn = Button(text="Start Game", background_color=(0, 1, 0, 1), font_size=24, size_hint=(1, 0.2))
+            start_btn.bind(on_release=self.start_game)
+            root.add_widget(start_btn)
+
+            Window.size = (400, 350)
+            return root
+
+        def update_bg(self, *args):
+            self.bg.pos = self.root.pos
+            self.bg.size = self.root.size
+
+        def set_cell_size(self, size):
+            global board_cells, cell_size, window_x, window_y
+            board_cells = size
+            window_x = 800 - (800 % board_cells)
+            window_y = 800 - (800 % board_cells)
+            cell_size = window_x // board_cells
+
+        def start_game(self, instance):
+            self.stop()
+            run_game()
+
+    SnakeMenuApp().run()
 
 start_game()

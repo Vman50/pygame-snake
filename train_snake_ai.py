@@ -44,12 +44,12 @@ def train():
 
     # Optional: Load a pre-trained Q-table if it exists
     # This is useful to continue training or evaluate a previously trained agent
-    #agent.load_q_table("q_table.pkl")
+    agent.load_q_table("q_table.pkl")
 
     # Set game speed for training visualization.
     # Higher speed = faster training, less visible frames.
     # Set to 0 to run "headless" (no visual updates) for maximum speed.
-    game.speed = 1000 # Adjust this value (e.g., 50 for visible, 1000 for fast, 0 for headless)
+    game.speed = 10000 
 
     print("Starting Q-Learning training...")
 

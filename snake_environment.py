@@ -159,8 +159,8 @@ class SnakeGameAI:
         reward += -0.1
 
         # Update UI and clock (can be skipped for faster training)
-        self._update_ui()
-        self.clock.tick(self.speed) # Control game speed for visualization
+        #self._update_ui()
+        #self.clock.tick(self.speed) # Control game speed for visualization
 
         return reward, self.game_over_flag, self.score
 

@@ -67,7 +67,50 @@ def run_game():
         time.sleep(2)
         pygame.quit()
         quit()
-    # Main game loop
+
+    # --- Countdown before game starts ---
+    for i in range(3, 0, -1):
+        # Draw checkerboard background
+        for row in range(board_cells):
+            for col in range(board_cells):
+                color = light_green if (row + col) % 2 == 0 else dark_green
+                pygame.draw.rect(
+                    game_window,
+                    color,
+                    pygame.Rect(col * cell_size, row * cell_size, cell_size, cell_size)
+                )
+        # Draw snake
+        for pos in snake_body:
+            pygame.draw.rect(game_window, green, pygame.Rect(pos[0], pos[1], cell_size, cell_size))
+        # Draw fruit
+        pygame.draw.rect(game_window, white, pygame.Rect(fruit_position[0], fruit_position[1], cell_size, cell_size))
+        # Draw countdown number
+        font = pygame.font.SysFont('times new roman', 80)
+        countdown_surface = font.render(str(i), True, red)
+        countdown_rect = countdown_surface.get_rect(center=(window_x // 2, window_y // 2))
+        game_window.blit(countdown_surface, countdown_rect)
+        pygame.display.update()
+        time.sleep(1)
+    # Show "Go!"
+    for row in range(board_cells):
+        for col in range(board_cells):
+            color = light_green if (row + col) % 2 == 0 else dark_green
+            pygame.draw.rect(
+                game_window,
+                color,
+                pygame.Rect(col * cell_size, row * cell_size, cell_size, cell_size)
+            )
+    for pos in snake_body:
+        pygame.draw.rect(game_window, green, pygame.Rect(pos[0], pos[1], cell_size, cell_size))
+    pygame.draw.rect(game_window, white, pygame.Rect(fruit_position[0], fruit_position[1], cell_size, cell_size))
+    font = pygame.font.SysFont('times new roman', 80)
+    go_surface = font.render("Go!", True, (255, 215, 0))
+    go_rect = go_surface.get_rect(center=(window_x // 2, window_y // 2))
+    game_window.blit(go_surface, go_rect)
+    pygame.display.update()
+    time.sleep(0.7)
+
+    # --- Main game loop ---
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

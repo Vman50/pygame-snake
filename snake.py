@@ -4,11 +4,10 @@ import random
 import time
 import ttkbootstrap as ttk
 
-# Window and board settings
-snake_speed = 5
-window_x = 800
-window_y = 800
+# Default board settings
 board_cells = 12
+window_x = 800 - (800 % board_cells)
+window_y = 800 - (800 % board_cells)
 cell_size = window_x // board_cells
 
 # Colors
@@ -136,6 +135,13 @@ def run_game():
         fps.tick(snake_speed)
 
 def start_game():
+    def set_cell_size(size):
+        global board_cells, cell_size, window_x, window_y
+        board_cells = size
+        window_x = 800 - (800 % board_cells)
+        window_y = 800 - (800 % board_cells)
+        cell_size = window_x // board_cells
+
     root = ttk.Window(title="Snake Game", themename="darkly")
     root.geometry("300x200")
     root.resizable(False, False)
@@ -144,8 +150,17 @@ def start_game():
         root.destroy()
         run_game()
 
-    start_button = ttk.Button(root, text="Start Game", command=start)
+    start_button = ttk.Button(root, text="Start Game", command=start, bootstyle="success")
     start_button.pack(expand=True)
+
+    small_button = ttk.Button(root, text="Small Board", command=lambda: set_cell_size(8), bootstyle="info")
+    small_button.pack(expand=True)
+
+    medium_button = ttk.Button(root, text="Medium Board", command=lambda: set_cell_size(12), bootstyle="warning")
+    medium_button.pack(expand=True)
+
+    large_button = ttk.Button(root, text="Large Board", command=lambda: set_cell_size(16), bootstyle="danger")
+    large_button.pack(expand=True, side="bottom")
 
     root.mainloop()
 

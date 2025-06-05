@@ -39,6 +39,7 @@ class Agent:
         """
         head = game.snake_position
         cell_size = game.cell_size
+        body = game.snake_body  # Store snake body for easy access
 
         point_r = [head[0] + cell_size, head[1]]
         point_l = [head[0] - cell_size, head[1]]
@@ -55,11 +56,12 @@ class Agent:
             collision, _ = game.is_collision(point) # Unpack, take only the boolean part
             return collision
 
-        # Helper function to check if a point is close to the snake's body
-        def is_close_to_body(point):
-            if point in game.snake_body[1:]:
-                return True
-            return False
+        # Helper function to count nearby body segments
+        def count_nearby_body_segments(point):
+            count = 0
+            if point in body[1:]:  # Exclude head
+                count = 1  # Simple presence/absence
+            return count
 
         state = [
             # Danger straight (is there a collision in the current forward direction?)
@@ -80,23 +82,10 @@ class Agent:
             (dir_r and get_collision_status(point_u)) or
             (dir_l and get_collision_status(point_d)),
 
-            # Is close to body straight?
-            (dir_r and is_close_to_body(point_r)) or
-            (dir_l and is_close_to_body(point_l)) or
-            (dir_u and is_close_to_body(point_u)) or
-            (dir_d and is_close_to_body(point_d)),
-
-            # Is close to body right?
-            (dir_u and is_close_to_body(point_r)) or
-            (dir_d and is_close_to_body(point_l)) or
-            (dir_l and is_close_to_body(point_u)) or
-            (dir_r and is_close_to_body(point_d)),
-
-            # Is close to body left?
-            (dir_u and is_close_to_body(point_l)) or
-            (dir_d and is_close_to_body(point_r)) or
-            (dir_r and is_close_to_body(point_u)) or
-            (dir_l and is_close_to_body(point_d)),
+            # Count nearby body segments in each direction
+            count_nearby_body_segments(point_r if dir_r else (point_l if dir_l else (point_u if dir_u else point_d))),  # Straight
+            count_nearby_body_segments(point_u if dir_r else (point_d if dir_l else (point_l if dir_u else point_r))),  # Right
+            count_nearby_body_segments(point_l if dir_r else (point_r if dir_l else (point_d if dir_u else point_u))),  # Left
 
             # Current movement direction (one-hot encoded)
             dir_l,
@@ -108,7 +97,7 @@ class Agent:
             game.fruit_position[0] < head[0],  # food left
             game.fruit_position[0] > head[0],  # food right
             game.fruit_position[1] < head[1],  # food up
-            game.fruit_position[1] > head[1]   # food down
+            game.fruit_position[1] > head[0]   # food down
         ]
         return np.array(state, dtype=int)
 

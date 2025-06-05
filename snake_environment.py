@@ -146,10 +146,14 @@ class SnakeGameAI:
         # Penalty if it collides or gets stuck (timeout)
         if collision_detected or self.frame_iteration > 100 * len(self.snake_body):
             self.game_over_flag = True
-            reward = -10 # Large penalty for dying
             if collision_detected:
+                if collision_type == "self":
+                    reward = -50  # MUCH larger penalty for self-collision
+                else:
+                    reward = -10  # Standard wall collision penalty
                 cause_of_death = collision_type # Set to "wall" or "self"
             else:
+                reward = -10 # Large penalty for dying
                 cause_of_death = "timeout" # Set to "timeout" if no collision but frame limit hit
             return reward, self.game_over_flag, self.score, cause_of_death # Return cause_of_death
 
@@ -163,6 +167,12 @@ class SnakeGameAI:
             self.frame_iteration = 0 # Reset frame iteration on eating
         else:
             self.snake_body.pop() # Remove tail if no fruit eaten
+
+        # Proximity penalty (encourage staying away from body)
+        for segment in self.snake_body[1:]:
+            distance = np.linalg.norm(np.array(self.snake_position) - np.array(segment))
+            if distance < 2 * self.cell_size:  # Adjust threshold as needed
+                reward -= 0.05  # Small negative reward for proximity
 
         # Small negative reward for each step to encourage faster fruit consumption
         reward += -0.1

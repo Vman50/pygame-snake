@@ -1,7 +1,7 @@
 # train_snake_ai.py
 import pygame
 import matplotlib.pyplot as plt
-from IPython import display # Still useful for clearing output in environments like Jupyter
+from IPython import display
 import os
 from collections import defaultdict
 
@@ -11,24 +11,26 @@ from q_learning_agent import Agent
 
 # --- Configuration ---
 Q_TABLE_FILENAME = "q_table.pkl"
-TOTAL_GAMES_TO_TRAIN = 5000
-PLOT_EVERY_N_GAMES = 10 # How often to update the plot (adjust for desired plot frequency)
+TOTAL_GAMES_TO_TRAIN = 50000
+PLOT_EVERY_N_GAMES = 100
+USE_AI_TO_PLAY = False  # Set this to True to use the AI, False to train
+GAME_SPEED = 0 # Visual game speed, set to 0 if you want to train because it runs faster
 
 # Ensure matplotlib is in interactive mode for live plotting
-plt.ion() # Turn on interactive mode
+plt.ion()
 
 def init_plot():
     """Initializes and returns the figure and axes for live plotting."""
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
-    plt.tight_layout() # Adjust layout to prevent overlap
-    plt.show(block=False) # Display the plot without blocking
+    plt.tight_layout()
+    plt.show(block=False)
     return fig, ax1, ax2
 
 def update_plot(fig, ax1, ax2, scores, mean_scores, record_score, death_causes_counts):
     """Updates the content of the existing plot axes."""
     # Clear previous content on axes
-    ax1.cla() # Clear axis 1
-    ax2.cla() # Clear axis 2
+    ax1.cla()
+    ax2.cla()
 
     # Plot 1: Scores
     ax1.set_title('Training Progress (Q-Learning)')
@@ -54,7 +56,7 @@ def update_plot(fig, ax1, ax2, scores, mean_scores, record_score, death_causes_c
     filtered_labels = [label for i, label in enumerate(ordered_labels) if ordered_values[i] > 0]
     filtered_values = [value for value in ordered_values if value > 0]
 
-    if filtered_labels: # Only plot if there are actually any deaths to show
+    if filtered_labels:
         ax2.bar(filtered_labels, filtered_values, color=['red', 'blue', 'orange'])
     ax2.set_title('Cumulative Death Causes')
     ax2.set_xlabel('Death Cause')
@@ -63,7 +65,7 @@ def update_plot(fig, ax1, ax2, scores, mean_scores, record_score, death_causes_c
 
     # Redraw the canvas
     fig.canvas.draw()
-    fig.canvas.flush_events() # Process any GUI events
+    fig.canvas.flush_events()
 
 def train():
     """Main training loop for the Q-learning Snake AI."""
@@ -79,11 +81,11 @@ def train():
     agent = Agent()
     game = SnakeGameAI()
 
-    agent.load_q_table(Q_TABLE_FILENAME)
+    #agent.load_q_table(Q_TABLE_FILENAME)
 
-    game.speed = 200 # Visual game speed
+    game.speed = GAME_SPEED  # Visual game speed
 
-    print("Starting Q-Learning training...")
+    print("Starting Q-Learning...")
 
     # Initialize the plot outside the loop
     fig, ax1, ax2 = init_plot()
@@ -95,42 +97,53 @@ def train():
             reward, done, score, cause_of_death = game.play_step(final_move)
             state_new = agent.get_state(game)
 
-            agent.train_short_memory(state_old, final_move, reward, state_new, done)
-            agent.remember(state_old, final_move, reward, state_new, done)
+            if not USE_AI_TO_PLAY:  # Only train if USE_AI_TO_PLAY is False
+                agent.train_short_memory(state_old, final_move, reward, state_new, done)
+                agent.remember(state_old, final_move, reward, state_new, done)
 
             if done:
-                game.reset()
-                agent.n_games += 1
-                agent.train_long_memory()
+                if not USE_AI_TO_PLAY:
+                    game.reset()
+                    agent.n_games += 1
+                    agent.train_long_memory()
 
-                if score > record:
-                    record = score
-                    agent.save_q_table(Q_TABLE_FILENAME)
+                    if score > record:
+                        record = score
+                        agent.save_q_table(Q_TABLE_FILENAME)
 
-                if cause_of_death:
-                    death_causes_counts[cause_of_death] += 1
+                    if cause_of_death:
+                        death_causes_counts[cause_of_death] += 1
+                        print(f"Cause of death: {cause_of_death}")  # Print cause of death
 
-                print(f'Game: {agent.n_games}, Score: {score}, Record: {record}, Epsilon: {agent.epsilon:.4f}, Q-table size: {len(agent.q_table)}')
+                    print(f'Game: {agent.n_games}, Score: {score}, Record: {record}, Epsilon: {agent.epsilon:.4f}, Q-table size: {len(agent.q_table)}')
 
-                plot_scores.append(score)
-                total_score += score
-                mean_score = total_score / agent.n_games
-                plot_mean_scores.append(mean_score)
+                    # Print total death causes
+                    print("Total Death Causes:")
+                    for cause, count in death_causes_counts.items():
+                        print(f"  {cause}: {count}")
 
-                # Update the existing plot instead of creating a new one
-                if agent.n_games % PLOT_EVERY_N_GAMES == 0:
-                    update_plot(fig, ax1, ax2, plot_scores, plot_mean_scores, record, death_causes_counts)
+                    plot_scores.append(score)
+                    total_score += score
+                    mean_score = total_score / agent.n_games
+                    plot_mean_scores.append(mean_score)
 
-                if agent.n_games >= TOTAL_GAMES_TO_TRAIN:
+                    # Update the existing plot instead of creating a new one
+                    if agent.n_games % PLOT_EVERY_N_GAMES == 0:
+                        update_plot(fig, ax1, ax2, plot_scores, plot_mean_scores, record, death_causes_counts)
+                else:
+                    game.reset()  # Just reset the game if using AI to play
+
+                if not USE_AI_TO_PLAY and agent.n_games >= TOTAL_GAMES_TO_TRAIN:
                     print(f"Training complete after {agent.n_games} games.")
                     break
 
     except KeyboardInterrupt:
-        print("\nTraining interrupted by user.")
+        print("\nInterrupted by user.")
     finally:
-        agent.save_q_table(Q_TABLE_FILENAME)
+        if not USE_AI_TO_PLAY:
+            agent.save_q_table(Q_TABLE_FILENAME)
         pygame.quit()
-        plt.close(fig) # Close the matplotlib figure when done
+        plt.close(fig)
 
 if __name__ == '__main__':
     train()

@@ -1,3 +1,4 @@
+# train_snake_ai.py
 import pygame
 import matplotlib.pyplot as plt
 from IPython import display
@@ -12,8 +13,8 @@ MODEL_FILENAME = "dqn_model.pth"
 TOTAL_GAMES_TO_TRAIN = 250000
 PLOT_EVERY_N_GAMES = 100
 USE_AI_TO_PLAY = False  # Set this to True to use the AI, False to train
-GAME_SPEED = 0
-RENDER_GAME = USE_AI_TO_PLAY
+GAME_SPEED = 0 # No delay during training
+RENDER_GAME = USE_AI_TO_PLAY # Only render if USE_AI_TO_PLAY is True
 
 plt.ion()
 
@@ -90,11 +91,18 @@ def train():
                 agent.n_games += 1
                 agent.train_long_memory()
 
-                record_broken = False
+                # Removed post-game rewards that were confusing the agent's learning
+                # if score > mean_score:
+                #     reward += 5
+                # else:
+                #     reward -= 5
+                # if record_broken:
+                #     reward += 20
+
                 if score > record:
                     record = score
                     agent.save_model(MODEL_FILENAME)
-                    record_broken = True
+                    # record_broken = True # This flag was only used for the now-removed reward
 
                 if cause_of_death:
                     death_causes_counts[cause_of_death] += 1
@@ -105,15 +113,6 @@ def train():
                 mean_score = total_score / agent.n_games
                 plot_mean_scores.append(mean_score)
 
-                # +5 for beating the average score
-                if score > mean_score:
-                    reward += 5
-                else:
-                    reward -= 5
-
-                # +N for breaking the record score (e.g., N=20)
-                if record_broken:
-                    reward += 20
 
                 print(f'Game: {agent.n_games}, Score: {score}, Mean: {mean_score:.2f}, Record: {record}, Epsilon: {agent.epsilon:.4f}')
 

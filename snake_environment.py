@@ -181,7 +181,7 @@ class SnakeGameAI:
             np.linalg.norm(np.array(self.snake_position) - np.array(segment))
             for segment in self.snake_body[1:]
         ) if len(self.snake_body) > 1 else self.cell_size
-        reward += 0.05 * (min_dist / (game.w + game.h))  # Encourage open space
+        reward += 0.05 * (min_dist / (self.w + self.h))  # Encourage open space
 
         # Only tick and update UI if rendering
         if self.render:

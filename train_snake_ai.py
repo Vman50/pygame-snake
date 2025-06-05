@@ -9,7 +9,7 @@ from q_learning_agent import Agent
 
 # --- Configuration ---
 MODEL_FILENAME = "dqn_model.pth"
-TOTAL_GAMES_TO_TRAIN = 50000
+TOTAL_GAMES_TO_TRAIN = 250000
 PLOT_EVERY_N_GAMES = 100
 USE_AI_TO_PLAY = False  # Set this to True to use the AI, False to train
 GAME_SPEED = 0

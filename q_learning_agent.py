@@ -28,91 +28,61 @@ class Agent:
         self.loss_fn = nn.MSELoss()
 
     def get_state(self, game):
-        head = game.snake_position
-        cell_size = game.cell_size
-        body = game.snake_body
+        grid = np.zeros((game.board_cells, game.board_cells), dtype=np.float32)
+        for segment in game.snake_body:
+            x, y = segment[0] // game.cell_size, segment[1] // game.cell_size
+            if 0 <= x < game.board_cells and 0 <= y < game.board_cells:
+                grid[y, x] = 1.0  # Mark snake body
+        fx, fy = game.fruit_position[0] // game.cell_size, game.fruit_position[1] // game.cell_size
+        if 0 <= fx < game.board_cells and 0 <= fy < game.board_cells:
+            grid[fy, fx] = 2.0  # Mark fruit
 
-        point_r = [head[0] + cell_size, head[1]]
-        point_l = [head[0] - cell_size, head[1]]
-        point_u = [head[0], head[1] - cell_size]
-        point_d = [head[0], head[1] + cell_size]
+        flat_grid = grid.flatten()
 
-        dir_l = game.direction == 'LEFT'
-        dir_r = game.direction == 'RIGHT'
-        dir_u = game.direction == 'UP'
-        dir_d = game.direction == 'DOWN'
-
-        def get_collision_status(point):
-            collision, _ = game.is_collision(point)
-            return collision
-
-        def count_nearby_body_segments(point):
-            return int(point in body[1:])  # Exclude head
-
-        dist_wall_left = head[0] / (game.w - cell_size)
-        dist_wall_right = (game.w - cell_size - head[0]) / (game.w - cell_size)
-        dist_wall_up = head[1] / (game.h - cell_size)
-        dist_wall_down = (game.h - cell_size - head[1]) / (game.h - cell_size)
-
-        def min_body_dist(dx, dy):
-            min_dist = 1.0
-            for segment in body[1:]:
-                if dx != 0 and segment[1] == head[1]:
-                    dist = abs(segment[0] - head[0])
-                    if (dx > 0 and segment[0] > head[0]) or (dx < 0 and segment[0] < head[0]):
-                        min_dist = min(min_dist, dist / (game.w - cell_size))
-                if dy != 0 and segment[0] == head[0]:
-                    dist = abs(segment[1] - head[1])
-                    if (dy > 0 and segment[1] > head[1]) or (dy < 0 and segment[1] < head[1]):
-                        min_dist = min(min_dist, dist / (game.h - cell_size))
-            return min_dist
-
-        dist_body_right = min_body_dist(1, 0)
-        dist_body_left = min_body_dist(-1, 0)
-        dist_body_up = min_body_dist(0, -1)
-        dist_body_down = min_body_dist(0, 1)
-
-        state = [
-            (dir_r and get_collision_status(point_r)) or
-            (dir_l and get_collision_status(point_l)) or
-            (dir_u and get_collision_status(point_u)) or
-            (dir_d and get_collision_status(point_d)),
-
-            (dir_u and get_collision_status(point_r)) or
-            (dir_d and get_collision_status(point_l)) or
-            (dir_l and get_collision_status(point_u)) or
-            (dir_r and get_collision_status(point_d)),
-
-            (dir_u and get_collision_status(point_l)) or
-            (dir_d and get_collision_status(point_r)) or
-            (dir_r and get_collision_status(point_u)) or
-            (dir_l and get_collision_status(point_d)),
-
-            count_nearby_body_segments(point_r if dir_r else (point_l if dir_l else (point_u if dir_u else point_d))),
-            count_nearby_body_segments(point_u if dir_r else (point_d if dir_l else (point_l if dir_u else point_r))),
-            count_nearby_body_segments(point_l if dir_r else (point_r if dir_l else (point_d if dir_u else point_u))),
-
-            dir_l,
-            dir_r,
-            dir_u,
-            dir_d,
-
-            game.fruit_position[0] < head[0],
-            game.fruit_position[0] > head[0],
-            game.fruit_position[1] < head[1],
-            game.fruit_position[1] > head[1],
-
-            dist_wall_left,
-            dist_wall_right,
-            dist_wall_up,
-            dist_wall_down,
-
-            dist_body_left,
-            dist_body_right,
-            dist_body_up,
-            dist_body_down,
+        head_x, head_y = game.snake_position[0], game.snake_position[1]
+        fruit_dir = [
+            int(game.fruit_position[0] < head_x),
+            int(game.fruit_position[0] > head_x),
+            int(game.fruit_position[1] < head_y),
+            int(game.fruit_position[1] > head_y),
         ]
-        return np.array(state, dtype=float)
+        fruit_coords = [
+            game.fruit_position[0] / game.w,
+            game.fruit_position[1] / game.h
+        ]
+
+        # Distance to walls (normalized)
+        dist_wall_left = head_x / (game.w - game.cell_size)
+        dist_wall_right = (game.w - game.cell_size - head_x) / (game.w - game.cell_size)
+        dist_wall_up = head_y / (game.h - game.cell_size)
+        dist_wall_down = (game.h - game.cell_size - head_y) / (game.h - game.cell_size)
+
+        # Wall presence (one-hot)
+        at_left_wall = int(head_x == 0)
+        at_right_wall = int(head_x == game.w - game.cell_size)
+        at_top_wall = int(head_y == 0)
+        at_bottom_wall = int(head_y == game.h - game.cell_size)
+
+        wall_info = [
+            dist_wall_left, dist_wall_right, dist_wall_up, dist_wall_down,
+            at_left_wall, at_right_wall, at_top_wall, at_bottom_wall
+        ]
+
+        # --- Add direction as one-hot ---
+        direction = [
+            int(game.direction == 'LEFT'),
+            int(game.direction == 'RIGHT'),
+            int(game.direction == 'UP'),
+            int(game.direction == 'DOWN')
+        ]
+
+        # --- Add normalized snake length ---
+        max_length = game.board_cells * game.board_cells
+        norm_length = len(game.snake_body) / max_length
+
+        # --- Combine all state info ---
+        state = np.concatenate([flat_grid, fruit_dir, fruit_coords, wall_info, direction, [norm_length]])
+        return state
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))

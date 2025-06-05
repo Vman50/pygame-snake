@@ -9,7 +9,7 @@ from q_learning_agent import Agent
 
 # --- Configuration ---
 MODEL_FILENAME = "dqn_model.pth"
-TOTAL_GAMES_TO_TRAIN = 100000
+TOTAL_GAMES_TO_TRAIN = 50000
 PLOT_EVERY_N_GAMES = 100
 USE_AI_TO_PLAY = False  # Set this to True to use the AI, False to train
 GAME_SPEED = 0
@@ -64,8 +64,8 @@ def train():
     record = 0
     death_causes_counts = defaultdict(int)
     game = SnakeGameAI(speed=GAME_SPEED, render=RENDER_GAME)
-    dummy_agent = Agent(state_size=len(Agent(0,0).get_state(game)), action_size=3)
-    agent = dummy_agent  # For clarity
+    dummy_state = Agent(0,0).get_state(game)
+    agent = Agent(state_size=len(dummy_state), action_size=3)  # For clarity
 
     if os.path.exists(MODEL_FILENAME):
         agent.load_model(MODEL_FILENAME)

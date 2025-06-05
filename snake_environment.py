@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 # --- Game Constants ---
-BOARD_CELLS = 12
+BOARD_CELLS = 8
 WINDOW_SIZE = 800 - (800 % BOARD_CELLS)
 CELL_SIZE = WINDOW_SIZE // BOARD_CELLS
 
@@ -177,7 +177,11 @@ class SnakeGameAI:
             if distance < 2 * self.cell_size:
                 reward -= 0.3
 
-        reward += -0.1
+        min_dist = min(
+            np.linalg.norm(np.array(self.snake_position) - np.array(segment))
+            for segment in self.snake_body[1:]
+        ) if len(self.snake_body) > 1 else self.cell_size
+        reward += 0.05 * (min_dist / (game.w + game.h))  # Encourage open space
 
         # Only tick and update UI if rendering
         if self.render:

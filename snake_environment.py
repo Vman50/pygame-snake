@@ -17,16 +17,18 @@ LIGHT_GREEN = pygame.Color(170, 215, 81)
 DARK_GREEN = pygame.Color(162, 209, 73)
 
 class SnakeGameAI:
-    def __init__(self, w=WINDOW_SIZE, h=WINDOW_SIZE, speed=200): # Removed headless parameter
+    def __init__(self, w=WINDOW_SIZE, h=WINDOW_SIZE, speed=200, render=True):
         self.w = w
         self.h = h
         self.cell_size = CELL_SIZE
         self.board_cells = BOARD_CELLS
         self.speed = speed
+        self.render = render
 
-        pygame.init() # Pygame is always initialized for single-process version
-        self.display = pygame.display.set_mode((self.w, self.h))
-        pygame.display.set_caption('Snake AI Environment')
+        pygame.init()
+        self.display = pygame.display.set_mode((self.w, self.h)) if self.render else None
+        if self.render:
+            pygame.display.set_caption('Snake AI Environment')
         self.clock = pygame.time.Clock()
         self.reset()
 
@@ -55,6 +57,8 @@ class SnakeGameAI:
         return [x, y]
 
     def _update_ui(self):
+        if not self.render:
+            return
         """Draws the game state to the Pygame window."""
         # Draw checkerboard background
         for row in range(self.board_cells):
@@ -172,13 +176,14 @@ class SnakeGameAI:
         for segment in self.snake_body[1:]:
             distance = np.linalg.norm(np.array(self.snake_position) - np.array(segment))
             if distance < 2 * self.cell_size:  # Adjust threshold as needed
-                reward -= 0.05  # Small negative reward for proximity
+                reward -= 0.3  # Small negative reward for proximity
 
         # Small negative reward for each step to encourage faster fruit consumption
         reward += -0.1
 
         # Update UI and clock
-        self._update_ui()
-        self.clock.tick(self.speed) # Control game speed for visualization
+        if self.render:
+            self._update_ui()
+            self.clock.tick(self.speed) # Control game speed for visualization
 
         return reward, self.game_over_flag, self.score, cause_of_death # Always return cause_of_death (will be None if game continues)

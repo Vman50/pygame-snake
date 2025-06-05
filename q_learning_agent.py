@@ -12,7 +12,7 @@ from snake_environment import CELL_SIZE, WINDOW_SIZE
 MAX_MEM_SIZE = 100_000 # Size of the experience replay buffer
 BATCH_SIZE = 1000      # Number of experiences to sample for long-term training
 LEARNING_RATE = 0.1    # Alpha (α) in Q-learning formula
-GAMMA = 0.9            # Discount factor (γ) in Q-learning formula
+GAMMA = 0.99            # Discount factor (γ) in Q-learning formula
 
 class Agent:
     # Reverted __init__ to use a local q_table
@@ -58,10 +58,32 @@ class Agent:
 
         # Helper function to count nearby body segments
         def count_nearby_body_segments(point):
-            count = 0
-            if point in body[1:]:  # Exclude head
-                count = 1  # Simple presence/absence
-            return count
+            return int(point in body[1:])  # Exclude head
+
+        # --- New: Distance to nearest wall (normalized 0-1) ---
+        dist_wall_left = head[0] / (game.w - cell_size)
+        dist_wall_right = (game.w - cell_size - head[0]) / (game.w - cell_size)
+        dist_wall_up = head[1] / (game.h - cell_size)
+        dist_wall_down = (game.h - cell_size - head[1]) / (game.h - cell_size)
+
+        # --- New: Distance to nearest body segment (normalized 0-1) ---
+        def min_body_dist(dx, dy):
+            min_dist = 1.0
+            for segment in body[1:]:
+                if dx != 0 and segment[1] == head[1]:  # Horizontal
+                    dist = abs(segment[0] - head[0])
+                    if (dx > 0 and segment[0] > head[0]) or (dx < 0 and segment[0] < head[0]):
+                        min_dist = min(min_dist, dist / (game.w - cell_size))
+                if dy != 0 and segment[0] == head[0]:  # Vertical
+                    dist = abs(segment[1] - head[1])
+                    if (dy > 0 and segment[1] > head[1]) or (dy < 0 and segment[1] < head[1]):
+                        min_dist = min(min_dist, dist / (game.h - cell_size))
+            return min_dist
+
+        dist_body_right = min_body_dist(1, 0)
+        dist_body_left = min_body_dist(-1, 0)
+        dist_body_up = min_body_dist(0, -1)
+        dist_body_down = min_body_dist(0, 1)
 
         state = [
             # Danger straight (is there a collision in the current forward direction?)
@@ -82,7 +104,7 @@ class Agent:
             (dir_r and get_collision_status(point_u)) or
             (dir_l and get_collision_status(point_d)),
 
-            # Count nearby body segments in each direction
+            # Proximity to body (straight, right, left)
             count_nearby_body_segments(point_r if dir_r else (point_l if dir_l else (point_u if dir_u else point_d))),  # Straight
             count_nearby_body_segments(point_u if dir_r else (point_d if dir_l else (point_l if dir_u else point_r))),  # Right
             count_nearby_body_segments(point_l if dir_r else (point_r if dir_l else (point_d if dir_u else point_u))),  # Left
@@ -97,9 +119,21 @@ class Agent:
             game.fruit_position[0] < head[0],  # food left
             game.fruit_position[0] > head[0],  # food right
             game.fruit_position[1] < head[1],  # food up
-            game.fruit_position[1] > head[0]   # food down
+            game.fruit_position[1] > head[1],  # food down
+
+            # --- New: Distance to nearest wall (normalized) ---
+            dist_wall_left,
+            dist_wall_right,
+            dist_wall_up,
+            dist_wall_down,
+
+            # --- New: Distance to nearest body segment (normalized) ---
+            dist_body_left,
+            dist_body_right,
+            dist_body_up,
+            dist_body_down,
         ]
-        return np.array(state, dtype=int)
+        return np.array(state, dtype=float)
 
     def remember(self, state, action, reward, next_state, done):
         """Stores an experience (state, action, reward, next_state, done) in memory."""

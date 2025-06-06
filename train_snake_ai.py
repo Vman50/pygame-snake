@@ -12,9 +12,9 @@ from q_learning_agent import Agent
 MODEL_FILENAME = "dqn_model.pth"
 TOTAL_GAMES_TO_TRAIN = 250000
 PLOT_EVERY_N_GAMES = 100
-USE_AI_TO_PLAY = False  # Set this to True to use the AI, False to train
-GAME_SPEED = 0 # No delay during training
-RENDER_GAME = USE_AI_TO_PLAY # Only render if USE_AI_TO_PLAY is True
+USE_AI_TO_PLAY = False
+GAME_SPEED = 0
+RENDER_GAME = USE_AI_TO_PLAY
 
 plt.ion()
 
@@ -66,7 +66,7 @@ def train():
     death_causes_counts = defaultdict(int)
     game = SnakeGameAI(speed=GAME_SPEED, render=RENDER_GAME)
     dummy_state = Agent(0,0).get_state(game)
-    agent = Agent(state_size=len(dummy_state), action_size=3)  # For clarity
+    agent = Agent(state_size=len(dummy_state), action_size=3)
 
     if os.path.exists(MODEL_FILENAME):
         agent.load_model(MODEL_FILENAME)
@@ -74,6 +74,8 @@ def train():
     print("Starting DQN Training...")
 
     fig, ax1, ax2 = init_plot()
+
+    total_game_time = 0.0 # Initialize total time
 
     try:
         while True:
@@ -87,22 +89,16 @@ def train():
                 agent.remember(state_old, final_move, reward, state_new, done)
 
             if done:
+                game_duration = time.time() - game.start_time # Calculate game duration
+                total_game_time += game_duration # Add to total
+
                 game.reset()
                 agent.n_games += 1
                 agent.train_long_memory()
 
-                # Removed post-game rewards that were confusing the agent's learning
-                # if score > mean_score:
-                #     reward += 5
-                # else:
-                #     reward -= 5
-                # if record_broken:
-                #     reward += 20
-
                 if score > record:
                     record = score
                     agent.save_model(MODEL_FILENAME)
-                    # record_broken = True # This flag was only used for the now-removed reward
 
                 if cause_of_death:
                     death_causes_counts[cause_of_death] += 1
@@ -113,8 +109,9 @@ def train():
                 mean_score = total_score / agent.n_games
                 plot_mean_scores.append(mean_score)
 
+                avg_game_time = total_game_time / agent.n_games if agent.n_games > 0 else 0 # Calculate average
 
-                print(f'Game: {agent.n_games}, Score: {score}, Mean: {mean_score:.2f}, Record: {record}, Epsilon: {agent.epsilon:.4f}')
+                print(f'Game: {agent.n_games}, Score: {score}, Mean: {mean_score:.2f}, Record: {record}, Epsilon: {agent.epsilon:.4f}, Avg Time: {avg_game_time:.4f}s') # Display avg time
 
                 print("Total Death Causes:")
                 for cause, count in death_causes_counts.items():
